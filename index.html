@@ -277,10 +277,10 @@ body.final .slot { outline: 0; }
 <script>
 /* ===== Case studies: edit this array to add or change write-ups ===== */
 const CASES = [
-  { cat: "research", grid: "B2-01", title: "Ransomware leak-site tracking (in progress)",
-    summary: "Tracking victim posts from three ransomware groups (Qilin, Akira, SafePay) on public leak-site trackers since Oct 30, 2026. 40 posts logged as of Nov 2, aggregated by sector and country. Write-up in progress.",
-    question: "Which organizations do these groups post, and how often?", method: "Public leak-site trackers, structured daily logging", tags: ["Threat intel", "Ransomware", "In progress"],
-    link: "", template: false },
+  { cat: "research", grid: "B2-01", title: "Ransomware leak sites, a payment trace and AI-drafted alerts",
+    summary: "77 leak-site posts from Qilin, Akira and SafePay over 11 days (Oct 30 &ndash; Nov 9, 2026), aggregated by sector and country; a three-hop on-chain trace from an OFAC-listed Zservers address; an ATT&amp;CK comparison from public advisories; and a test of AI-drafted customer alerts with every correction logged. Collection continues to Nov 29 for a v2 update.",
+    question: "How do these groups operate in the open, and can an AI draft accurate alerts from the data?", method: "Public leak-site tracker, ATT&amp;CK v20 mapping, Arkham and mempool.space tracing, logged AI corrections", tags: ["Threat intel", "Ransomware", "Blockchain tracing", "AI"],
+    link: "ransomware-leak-sites/", template: false },
   { cat: "research", grid: "B2-02", title: "Threat actors in the Mt. Gox, Bitfinex and FTX collapses (M.A.S. capstone)",
     summary: "Examined how threat actors exploited weak oversight in the Mt. Gox, Bitfinex, and FTX collapses, ending in a policy memo with five recommendations.",
     question: "How did weak oversight enable these collapses?", method: "Case analysis, deterrence and game theory", tags: ["Research", "Threat intel"],
