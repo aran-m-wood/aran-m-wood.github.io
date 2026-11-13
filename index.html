@@ -1,0 +1,399 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Aran Wood · Field Notes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a survey map. Topographic contours (green) and bathymetric lines (slate) drift behind
+   content; every section is a "grid square" with a coordinate label. Amber marks evidence. */
+:root {
+  --canvas: #1E222A;
+  --canvas-raised: #242934;
+  --ink: #FFFFFF;
+  --ink-soft: #B9C0CC;
+  --ink-faint: #7E8796;
+  --amber: #C68A4C;
+  --amber-bright: #DDA266;
+  --hunter: #2E4436;
+  --slate: #3B4A6B;
+  --rule: #343A47;
+  --display: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.8125rem; --step-0: 1rem; --step-1: 1.25rem; --step-2: 1.75rem; --step-3: clamp(2.25rem, 6vw, 4rem);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--canvas); color: var(--ink);
+  font-family: var(--body); font-size: var(--step-0); line-height: 1.65; font-weight: 300;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--canvas); }
+#terrain { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.wrap {
+  position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--amber-bright); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.coord { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-faint); text-transform: uppercase; }
+
+/* Nav */
+header.nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--canvas) 86%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
+.mark { font-weight: 600; letter-spacing: 0.02em; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.mark svg { flex: none; }
+.nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 22px; flex-wrap: wrap; }
+.nav ul a { color: var(--ink-soft); text-decoration: none; font-size: var(--step--1); font-weight: 400; }
+.nav ul a:hover { color: var(--ink); }
+@media (max-width: 640px) { .nav ul { display: none; } }
+
+/* Hero */
+.hero { padding-block: 88px 72px; display: grid; gap: 28px; }
+.hero h1 { font-size: var(--step-3); font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; max-width: 14ch; }
+.hero h1 em { font-style: normal; color: var(--amber); }
+.hero .lede { font-size: var(--step-1); color: var(--ink-soft); max-width: 46ch; line-height: 1.55; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.hero-meta div { display: grid; gap: 2px; }
+.hero-meta strong { font-weight: 500; font-size: var(--step--1); }
+.cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn { font-family: var(--body); font-size: var(--step--1); font-weight: 500; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--amber); text-decoration: none; cursor: pointer; transition: background .2s, color .2s; }
+.btn.primary { background: var(--amber); color: var(--canvas); }
+.btn.primary:hover { background: var(--amber-bright); }
+.btn.ghost { background: transparent; color: var(--amber-bright); }
+.btn.ghost:hover { background: color-mix(in srgb, var(--amber) 14%, transparent); }
+
+/* Sections */
+section.block { padding-block: 64px; border-top: 1px solid var(--rule); }
+.block-head { display: grid; gap: 8px; margin-bottom: 36px; }
+.block-head h2 { font-size: var(--step-2); font-weight: 600; letter-spacing: -0.01em; }
+.block-head p { color: var(--ink-soft); max-width: 60ch; }
+
+/* About */
+.about { display: grid; grid-template-columns: 1.3fr 1fr; gap: 48px; }
+.about > * { min-width: 0; }
+.about p + p { margin-top: 16px; }
+.about .bio { color: var(--ink-soft); max-width: 62ch; }
+.about .bio strong { color: var(--ink); font-weight: 500; }
+.ledger { display: grid; gap: 0; border-left: 1px solid var(--rule); padding-left: 24px; }
+.ledger div { padding-block: 12px; border-bottom: 1px dashed var(--rule); display: grid; gap: 2px; }
+.ledger div:last-child { border-bottom: 0; }
+.ledger dt { font-family: var(--mono); font-size: 0.72rem; color: var(--amber); letter-spacing: 0.06em; text-transform: uppercase; }
+.ledger dd { margin: 0; font-weight: 400; }
+@media (max-width: 800px) { .about { grid-template-columns: 1fr; gap: 32px; } .ledger { border-left: 0; padding-left: 0; border-top: 1px solid var(--rule); } }
+
+/* Case studies */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.chip { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em; padding: 7px 14px; border-radius: 999px; background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); cursor: pointer; transition: all .2s; }
+.chip:hover { color: var(--ink); border-color: var(--ink-faint); }
+.chip[aria-pressed="true"] { background: var(--amber); color: var(--canvas); border-color: var(--amber); }
+.cases { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.case { position: relative; background: var(--canvas-raised); border: 1px solid var(--rule); border-radius: 10px; padding: 24px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 14px; overflow: hidden; transition: border-color .25s, transform .25s; }
+.case:hover { border-color: color-mix(in srgb, var(--amber) 60%, var(--rule)); transform: translateY(-2px); }
+.case[hidden] { display: none !important; }
+.case .tile { position: absolute; inset: 0 0 auto auto; width: 140px; height: 140px; opacity: .55; pointer-events: none; }
+.case .coord { position: relative; }
+.case h3 { font-size: var(--step-1); font-weight: 500; line-height: 1.3; position: relative; }
+.case p { color: var(--ink-soft); font-size: 0.94rem; }
+.case dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: var(--step--1); }
+.case dt { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+.case dd { margin: 0; color: var(--ink); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-family: var(--mono); font-size: 0.68rem; padding: 3px 8px; border-radius: 4px; background: color-mix(in srgb, var(--slate) 55%, transparent); color: var(--ink-soft); }
+.tag.dfir { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber-bright); }
+.tag.osint { background: color-mix(in srgb, var(--hunter) 90%, transparent); color: #A9C7B2; }
+.case .more { font-size: var(--step--1); font-weight: 500; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+.case .more:hover { text-decoration: underline; }
+.empty { color: var(--ink-faint); font-family: var(--mono); font-size: var(--step--1); padding: 24px 0; }
+
+/* Labs timeline */
+.track { display: grid; gap: 0; position: relative; }
+.track::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(var(--amber), var(--slate)); }
+.stop { display: grid; grid-template-columns: 16px 140px 1fr; gap: 20px; padding-block: 14px; align-items: start; }
+.stop > * { min-width: 0; }
+.stop .pin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--amber); background: var(--canvas); margin-top: 5px; position: relative; z-index: 1; }
+.stop.done .pin { background: var(--amber); }
+.stop .when { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); padding-top: 3px; }
+.stop h3 { font-size: var(--step-0); font-weight: 500; }
+.stop p { color: var(--ink-soft); font-size: 0.92rem; margin-top: 2px; }
+.status { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; margin-left: 8px; vertical-align: 2px; }
+.status.ok { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber-bright); }
+.status.prog { background: color-mix(in srgb, var(--slate) 70%, transparent); color: var(--ink-soft); }
+@media (max-width: 560px) { .stop { grid-template-columns: 16px 1fr; } .stop .when { grid-column: 2; padding-top: 0; } .stop .body { grid-column: 2; } }
+
+.labs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 20px; margin-top: 40px; }
+.lab { border-top: 2px solid var(--hunter); padding-top: 16px; display: grid; gap: 6px; }
+.lab h3 { font-size: var(--step-0); font-weight: 500; }
+.lab p { color: var(--ink-soft); font-size: 0.92rem; }
+
+/* Contact */
+.contact { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; }
+.contact > * { min-width: 0; }
+.contact h2 { font-size: var(--step-2); font-weight: 600; max-width: 20ch; }
+.contact .addr { font-family: var(--mono); font-size: var(--step-0); color: var(--ink); user-select: all; word-break: break-all; }
+.contact-list { display: grid; gap: 10px; }
+.copy { font-family: var(--mono); font-size: 0.72rem; background: none; border: 1px solid var(--rule); color: var(--ink-soft); padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+.copy:hover { color: var(--ink); border-color: var(--ink-faint); }
+@media (max-width: 700px) { .contact { grid-template-columns: 1fr; } }
+footer { padding-block: 32px 48px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+/* Template hint markers (delete the .slot class when content is final) */
+.slot { outline: 1px dashed color-mix(in srgb, var(--amber) 45%, transparent); outline-offset: 4px; border-radius: 2px; }
+body.final .slot { outline: 0; }
+.slot-toggle { position: fixed; right: max(16px, calc(16px + env(safe-area-inset-right, 0px))); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 6; }
+
+/* Reveal: visible at rest, gentle lift when JS is ready */
+.reveal { transition: opacity .6s ease, transform .6s ease; }
+.js .reveal.pending { opacity: .35; transform: translateY(10px); }
+@media (prefers-reduced-motion: reduce) { .reveal, .case { transition: none; } .js .reveal.pending { opacity: 1; transform: none; } }
+</style>
+
+<canvas id="terrain" aria-hidden="true"></canvas>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="mark" href="#top">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9.5" fill="none" stroke="#C68A4C" stroke-width="1.5"/><circle cx="11" cy="11" r="5" fill="none" stroke="#3B4A6B" stroke-width="1.5"/><circle cx="11" cy="11" r="1.8" fill="#C68A4C"/></svg>
+      Aran Wood
+    </a>
+    <ul>
+      <li><a href="#about">About</a></li>
+      <li><a href="#cases">Case studies</a></li>
+      <li><a href="#labs">Labs &amp; certs</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+    <!-- HERO -->
+    <section class="hero">
+      <span class="coord">35.28°N 120.66°W · San Luis Obispo, CA</span>
+      <h1>Threat intel and IR, grounded in <em>how attackers think.</em></h1>
+      <p class="lede">Threat intelligence and IR analyst in training. Criminology research on crypto threat actors, self-directed OSINT and blockchain-tracing study, and a home Wazuh lab for detection practice.</p>
+      <div class="hero-meta">
+        <div><span class="coord">Focus</span><strong>Threat intel · DFIR · Crypto fraud</strong></div>
+        <div><span class="coord">Open to</span><strong>Threat intel, SOC and IR roles</strong></div>
+        <div><span class="coord">Based</span><strong>Central Coast, CA · Remote</strong></div>
+      </div>
+      <div class="cta-row">
+        <a class="btn primary" href="#cases">See the case work</a>
+        <a class="btn ghost" href="#contact">Get in touch</a>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="block reveal" id="about">
+      <div class="block-head">
+        <span class="coord">Grid A1 · Background</span>
+        <h2>From reading people to reading logs</h2>
+      </div>
+      <div class="about">
+        <div class="bio">
+          <p>I came to security through behavior. A master's in Criminology, Law &amp; Society taught me to ask <strong>why someone acted</strong> before asking how. That question shapes how I study threat actors and the incidents they leave behind.</p>
+          <p>My criminology capstone examined white-collar crime in the crypto industry, from why weak oversight invites it to the policies that could curb it. I continue that work through <strong>Nodo o Kiru</strong>, my self-directed practice for studying fraud typologies, OSINT methods, and blockchain tracing.</p>
+          
+        </div>
+        <dl class="ledger">
+          <div><dt>Education</dt><dd>M.A.S. Criminology, Law &amp; Society, UC Irvine · 4.0</dd></div>
+          
+          <div><dt>Education</dt><dd>B.A. Sociology, Cal Poly SLO</dd></div>
+          <div><dt>Practice</dt><dd>Founder, Nodo o Kiru (self-directed research)</dd></div>
+          <div><dt>Prior</dt><dd>Operations &amp; team supervision</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- CASE STUDIES -->
+    <section class="block reveal" id="cases">
+      <div class="block-head">
+        <span class="coord">Grid B2 · Evidence</span>
+        <h2>Case studies &amp; write-ups</h2>
+        <p>Each card follows the same report shape: the question, the method, and what the evidence showed. Victim names never appear; findings are aggregated by sector and country.</p>
+      </div>
+      <div class="filters" role="group" aria-label="Filter case studies">
+        <button class="chip" id="f-all" data-filter="all" aria-pressed="true">All</button>
+        <button class="chip" id="f-dfir" data-filter="dfir" aria-pressed="false">DFIR</button>
+        <button class="chip" id="f-osint" data-filter="osint" aria-pressed="false">OSINT</button>
+        <button class="chip" id="f-research" data-filter="research" aria-pressed="false">Research</button>
+        <button class="chip" id="f-lab" data-filter="lab" aria-pressed="false">Lab</button>
+      </div>
+      <div class="cases" id="caseGrid"></div>
+      <p class="empty" id="caseEmpty" hidden>No write-ups in this category yet.</p>
+    </section>
+
+    <!-- LABS & CERTS -->
+    <section class="block reveal" id="labs">
+      <div class="block-head">
+        <span class="coord">Grid C3 · Field record</span>
+        <h2>Labs &amp; certifications</h2>
+        <p>Credentials in the order earned, then the environments where I practice.</p>
+      </div>
+      <div class="track">
+        <div class="stop done"><span class="pin"></span><span class="when">Completed</span><div class="body"><h3>Google Cybersecurity Professional Certificate <span class="status ok">Earned</span></h3><p>SIEM fundamentals, Linux, SQL, Python for security, incident handling.</p></div></div>
+        <div class="stop done"><span class="pin"></span><span class="when">Completed</span><div class="body"><h3>AML and KYC Compliance Essentials, Great Learning <span class="status ok">Earned</span></h3><p>Anti-money-laundering and know-your-customer fundamentals.</p></div></div>
+        <div class="stop"><span class="pin"></span><span class="when">In progress</span><div class="body"><h3>IBM Incident Response and Digital Forensics <span class="status prog">In progress</span></h3><p>Incident handling, evidence collection, and forensic analysis.</p></div></div>
+        <div class="stop"><span class="pin"></span><span class="when">Studying</span><div class="body"><h3>CompTIA A+ <span class="status prog">Studying</span></h3><p>Hardware, OS, and networking baseline for SOC and IR roles.</p></div></div>
+        <div class="stop"><span class="pin"></span><span class="when">Studying</span><div class="body"><h3>CompTIA Security+ <span class="status prog">Studying</span></h3><p>Threats, architecture, operations, and incident response.</p></div></div>
+        
+      </div>
+      <div class="labs-grid">
+        <div class="lab"><span class="coord">Home SOC</span><h3>Wazuh SIEM on VMware</h3><p>Wazuh manager and endpoints in a VMware home lab, set up for detection practice. Write-ups to follow.</p></div>
+        <div class="lab"><span class="coord">Practice</span><h3>Hack The Box</h3><p>Working through forensics Sherlocks. Write-ups to follow.</p></div>
+        <div class="lab"><span class="coord">Knowledge base</span><h3>Cyber OS vault</h3><p>An Obsidian vault that links certification study and lab notes.</p></div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="block reveal" id="contact">
+      <div class="contact">
+        <div>
+          <span class="coord">Grid D4 · Rendezvous</span>
+          <h2 style="margin-top:8px">Hiring for threat intel, SOC or IR? Let's compare notes.</h2>
+        </div>
+        <div class="contact-list">
+          <div><a href="https://github.com/aran-m-wood" target="_blank" rel="noopener">GitHub profile ↗</a></div>
+          <div><a href="https://www.linkedin.com/in/aran-m-wood" target="_blank" rel="noopener">LinkedIn profile ↗</a></div>
+          
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  <span class="coord">© 2026 Aran Wood</span>
+  <span class="coord">Survey complete · all coordinates approximate</span>
+</footer>
+
+
+
+<script>
+/* ===== Case studies: edit this array to add or change write-ups ===== */
+const CASES = [
+  { cat: "research", grid: "B2-01", title: "Ransomware leak sites, a payment trace and AI-drafted alerts",
+    summary: "77 leak-site posts from Qilin, Akira and SafePay over 11 days (Oct 30 &ndash; Nov 9, 2026), aggregated by sector and country; a three-hop on-chain trace from an OFAC-listed Zservers address; an ATT&amp;CK comparison from public advisories; and a test of AI-drafted customer alerts with every correction logged. Collection continues to Nov 29 for a v2 update.",
+    question: "How do these groups operate in the open, and can an AI draft accurate alerts from the data?", method: "Public leak-site tracker, ATT&amp;CK v20 mapping, Arkham and mempool.space tracing, logged AI corrections", tags: ["Threat intel", "Ransomware", "Blockchain tracing", "AI"],
+    link: "ransomware-leak-sites/", template: false },
+  { cat: "research", grid: "B2-02", title: "White-collar crime in the crypto industry (M.A.S. thesis, UC Irvine, 2023)",
+    summary: "Asked whether white-collar delinquency has a real presence in the crypto industry, using criminological theory and the regulatory record, with FTX's collapse as an example. Ends in a policy memo with five recommendations.",
+    question: "What presence, if any, does white-collar delinquency have in the crypto industry?", method: "Literature review; convenience, deterrence and game theory; regulatory analysis", tags: ["Research", "Financial crime", "Crypto", "Policy"],
+    link: "capstone/", template: false },
+  
+  
+  
+  
+];
+
+/* tiny topo tile per card, drawn deterministically from its id */
+function tileSVG(seed, cat) {
+  let s = 0; for (const c of seed) s = (s * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const color = cat === "osint" ? "#2E4436" : cat === "dfir" ? "#C68A4C" : "#3B4A6B";
+  const cx = 90 + rnd() * 30, cy = 30 + rnd() * 30; let paths = "";
+  for (let r = 1; r <= 6; r++) {
+    let d = ""; const pts = 24;
+    for (let i = 0; i <= pts; i++) {
+      const a = (i / pts) * Math.PI * 2, rr = r * 12 + Math.sin(a * 3 + r) * 4 + rnd() * 3;
+      d += (i ? "L" : "M") + (cx + Math.cos(a) * rr).toFixed(1) + " " + (cy + Math.sin(a) * rr).toFixed(1);
+    }
+    paths += `<path d="${d}Z" fill="none" stroke="${color}" stroke-width="1" opacity="${(0.9 - r * 0.12).toFixed(2)}"/>`;
+  }
+  return `<svg class="tile" viewBox="0 0 140 140" aria-hidden="true">${paths}</svg>`;
+}
+
+const grid = document.getElementById("caseGrid");
+grid.innerHTML = CASES.map(c => `
+  <article class="case" data-cat="${c.cat}">
+    ${tileSVG(c.grid, c.cat)}
+    <span class="coord">${c.grid} · ${c.cat.toUpperCase()}</span>
+    <h3 class="${c.template ? "slot" : ""}">${c.title}</h3>
+    <div style="display:grid;gap:14px;align-content:start">
+      <p>${c.summary}</p>
+      <dl><dt>Question</dt><dd>${c.question}</dd><dt>Method</dt><dd>${c.method}</dd></dl>
+    </div>
+    <div style="display:grid;gap:14px">
+      <div class="tags">${c.tags.map(t => `<span class="tag ${t === "DFIR" ? "dfir" : t === "OSINT" ? "osint" : ""}">${t}</span>`).join("")}</div>
+      ${c.link ? `<a class="more" href="${c.link}">Read the write-up →</a>` : ""}
+    </div>
+  </article>`).join("");
+
+const chips = document.querySelectorAll(".chip");
+chips.forEach(ch => ch.addEventListener("click", () => {
+  const f = ch.dataset.filter; let shown = 0;
+  chips.forEach(o => o.setAttribute("aria-pressed", String(o === ch)));
+  grid.querySelectorAll(".case").forEach(card => {
+    const on = f === "all" || card.dataset.cat === f; card.hidden = !on; if (on) shown++;
+  });
+  document.getElementById("caseEmpty").hidden = shown > 0;
+}));
+
+/* copy email */
+document.getElementById("copyEmail")?.addEventListener("click", e => {
+  const txt = document.getElementById("email").textContent.trim(), btn = e.currentTarget;
+  const done = () => { btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy", 1600); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById("email")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected"; };
+  try { navigator.clipboard.writeText(txt).then(done, fallback); } catch (_) { fallback(); }
+});
+
+/* template marker toggle */
+document.getElementById("slotToggle")?.addEventListener("click", e => {
+  const on = document.body.classList.toggle("final");
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  e.currentTarget.textContent = on ? "Show template markers" : "Hide template markers";
+});
+
+/* scroll reveal (content stays readable at rest) */
+document.documentElement.classList.add("js");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (!reduce && "IntersectionObserver" in window) {
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.remove("pending"); io.unobserve(en.target); } }), { rootMargin: "0px 0px -10% 0px" });
+  document.querySelectorAll(".reveal").forEach(el => { if (el.getBoundingClientRect().top > innerHeight) { el.classList.add("pending"); io.observe(el); } });
+}
+
+/* ===== Terrain: drifting topo (green, left) + bathymetry (slate, right) + amber route ===== */
+(() => {
+  const cv = document.getElementById("terrain"), ctx = cv.getContext("2d");
+  let w, h, dpr, t = 0;
+  function size() { dpr = Math.min(devicePixelRatio || 1, 2); w = cv.clientWidth; h = cv.clientHeight; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function field(x, y, k) { return Math.sin(x * 0.006 + k) * Math.cos(y * 0.005 - k * 0.7) + Math.sin((x + y) * 0.004 + k * 0.5) * 0.6; }
+  function contours(cx, cy, color, count, phase, spread) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    for (let r = 1; r <= count; r++) {
+      ctx.globalAlpha = 0.55 - r * (0.4 / count); ctx.beginPath();
+      for (let i = 0; i <= 90; i++) {
+        const a = (i / 90) * Math.PI * 2, px = cx + Math.cos(a) * r * spread, py = cy + Math.sin(a) * r * spread * 0.8;
+        const rr = r * spread + field(px, py, phase) * spread * 0.9;
+        const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.8;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.closePath(); ctx.stroke();
+    }
+  }
+  function route() {
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = "#C68A4C"; ctx.setLineDash([2, 6]); ctx.lineDashOffset = -t * 12; ctx.lineWidth = 1.2;
+    ctx.beginPath(); const pts = [[w * 0.06, h * 0.9], [w * 0.22, h * 0.72], [w * 0.48, h * 0.8], [w * 0.7, h * 0.55], [w * 0.92, h * 0.22]];
+    ctx.moveTo(...pts[0]); for (let i = 1; i < pts.length; i++) { const [px, py] = pts[i - 1], [x, y] = pts[i]; ctx.quadraticCurveTo(px, y, (px + x) / 2 + 20, (py + y) / 2); ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#C68A4C"; pts.forEach(([x, y]) => { ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, 7); ctx.fill(); });
+  }
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    contours(w * 0.05, h * 0.15, "#2E4436", 14, t * 0.4, Math.max(w, h) * 0.035);
+    contours(w * 0.98, h * 0.95, "#3B4A6B", 12, -t * 0.3 + 2, Math.max(w, h) * 0.04);
+    route(); ctx.globalAlpha = 1;
+  }
+  size(); addEventListener("resize", () => { size(); draw(); });
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { draw(); return; }
+  let last = 0;
+  (function loop(now) { if (now - last > 50) { t += 0.02; draw(); last = now; } requestAnimationFrame(loop); })(0);
+})();
+</script>
+
+</body></html>
