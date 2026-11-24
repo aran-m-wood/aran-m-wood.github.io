@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Recovery and Workstation Rebuild on a Failed NVMe SSD · Field Notes</title>
+<meta name="description" content="Recovering 166.75 GB from a non-booting Windows 11 laptop with Windows PE, isolating a write-locked NVMe SSD, replacing it, and rebuilding a hardened workstation before restoring data.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Data Recovery and Workstation Rebuild on a Failed NVMe SSD">
+<meta property="og:description" content="Recovering 166.75 GB from a non-booting Windows 11 laptop with Windows PE, isolating a write-locked NVMe SSD, replacing it, and rebuilding a hardened workstation before restoring data.">
+<meta property="og:url" content="https://aran-m-wood.github.io/data-recovery/">
+<link rel="canonical" href="https://aran-m-wood.github.io/data-recovery/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --canvas: #1E222A; --canvas-raised: #242934; --ink: #FFFFFF; --ink-soft: #B9C0CC; --ink-faint: #7E8796;
+  --amber: #C68A4C; --amber-bright: #DDA266; --rule: #343A47;
+  --body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink-soft); font-family: var(--body);
+  font-size: 1.0625rem; line-height: 1.75; font-weight: 400; }
+a { color: var(--amber-bright); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.9em; color: var(--ink);
+  background: color-mix(in srgb, var(--amber) 12%, transparent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-left, 0px)); }
+header.nav { border-bottom: 1px solid var(--rule); }
+header.nav .wrap { display: flex; justify-content: space-between; align-items: center; padding-block: 14px; }
+.back { color: var(--ink); text-decoration: none; font-weight: 500; font-size: 0.9rem; }
+.coord { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-faint); text-transform: uppercase; }
+article { padding-block: 56px 72px; }
+h1 { color: var(--ink); font-size: clamp(1.75rem, 4.6vw, 2.5rem); line-height: 1.15; font-weight: 600;
+  letter-spacing: -0.015em; margin: 12px 0 14px; text-wrap: balance; }
+h2 { color: var(--ink); font-size: 1.3rem; font-weight: 600; margin: 2.4em 0 0.6em; scroll-margin-top: 16px; }
+p { margin: 0 0 1.05em; }
+strong { color: var(--ink); font-weight: 600; }
+ol, ul { margin: 0 0 1.2em; padding-left: 1.4em; }
+li { margin-bottom: 0.55em; padding-left: 0.2em; }
+li::marker { color: var(--amber); }
+.byline { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.04em; color: var(--ink-faint); margin-bottom: 22px; }
+.note { margin-top: 2.2em; padding-top: 1em; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--ink-faint); }
+footer { border-top: 1px solid var(--rule); padding-block: 22px 40px; }
+@media print { body { background: #fff; color: #111; } h1, h2, strong { color: #000; } a { color: #8a5a2b; }
+  header.nav, footer { display: none; } }
+</style>
+</head>
+<body>
+<header class="nav"><div class="wrap"><a class="back" href="../">← Field Notes</a><span class="coord">Grid B2-03 · DFIR</span></div></header>
+<main class="wrap">
+<article>
+<span class="coord">Case study · Incident &amp; recovery</span>
+<h1>Data Recovery, Hardware Rebuild, and Workstation Hardening on a Failed NVMe SSD</h1>
+<p class="byline">Nov 23, 2026 | Aaron M. Wood</p>
+
+<p><strong>System:</strong> MSI GS65 Stealth — Intel Core i7-9750H, 16 GB RAM, 512 GB NVMe SSD (failed; replaced with a 1 TB M.2 2280 NVMe), UEFI/GPT. <strong>OS:</strong> Windows 11 Home 24H2, recovered and rebuilt via Windows PE.</p>
+<p>After a boot loop and a failed Windows Recovery Environment (WinRE), I recovered the user data from the non-booting drive, replaced the failed SSD, and rebuilt the OS on a hardened baseline before restoring any data. Working from Windows PE boot media, I bypassed the corrupted boot chain, rebuilt an external backup drive as NTFS, and copied 166.75 GB (28,758 files) with multi-threaded robocopy; then I identified a drive that had stopped accepting writes, replaced it through a full chassis teardown, and provisioned a clean install with pre-boot full-disk encryption, encrypted DNS, and segmented browsers.</p>
+<p><strong>Scope, stated honestly:</strong> this was offline recovery from a drive that was still readable, not live acquisition from a running system, and I did not maintain a forensic chain of custody. The integrity check here is a transfer-log audit, not a cryptographic hash comparison. Those limits are noted where they apply.</p>
+
+<h2 id="triage">Phase 1 — UEFI/BIOS triage and WinPE shell</h2>
+<p>Standard boot looped into the BIOS, and the built-in WinRE triggered hardware resets, so I moved to an external environment. I audited the UEFI boot configuration and booted directly from external Windows 11 24H2 installation media via the hardware boot menu. At the installer's partition-selection screen I opened an elevated command prompt (Shift + F10) with raw block-device access, rather than running the GUI installer.</p>
+
+<h2 id="boot-records">Phase 2 — Boot-record and filesystem checks</h2>
+<p>Before changing anything on disk, I separated logical corruption from physical failure. I ran <code>bootrec /scanos</code>, <code>bootrec /rebuildbcd</code>, and <code>bootrec /fixmbr</code>. <code>bootrec /fixboot</code> returned <strong>Access is denied</strong>, and <code>/scanos</code> found 0 Windows installations. On a UEFI/GPT system the boot files live on the FAT32 EFI System Partition, not in a legacy MBR boot sector, so <code>/fixmbr</code> and <code>/fixboot</code> are not the right repair here — <code>bcdboot</code> against the EFI partition is (see "What I'd do differently"). I enumerated logical disks with <code>wmic logicaldisk</code> and confirmed the primary NTFS user directory was readable, which meant the data could be copied before any repair.</p>
+
+<h2 id="copy">Phase 3 — External storage and data copy</h2>
+<p>Initial backup staging to a 1 TB external drive halted at 29.08 GB: the drive carried a legacy ~32 GB FAT32 partition that left ~900 GB unallocated and imposed a 4 GB single-file limit. I rebuilt it:</p>
+<ul>
+<li><strong>Clear:</strong> <code>diskpart</code> → <code>list disk</code> → <code>clean</code> isolated the 931 GB external target and removed the legacy FAT32 layout.</li>
+<li><strong>Provision:</strong> <code>create partition primary</code> → <code>format fs=ntfs quick</code> gave one 931 GB NTFS volume able to hold large files and ACL metadata.</li>
+<li><strong>Copy:</strong> <code>robocopy [src] [dst] /E /XJ /XD "AppData" /R:1 /W:1 /MT:8</code> — multi-threaded, one retry per file, skipping junctions and the transient AppData cache.</li>
+</ul>
+<p>The copy moved 166.75 GB — 28,758 files across 7,338 directories — in 32 minutes, about 87 MB/s average. The two logged errors (389.8 KB, ERROR 1920) were offline OneDrive cloud-only placeholder files, not local corruption; I confirmed that rather than assuming it. One honest limit: this verifies the copy <em>completed</em> and accounts for every error, but it does not prove the files are bit-identical, because I did not hash them before and after. <strong>[Confidence: copy complete — High; copy bit-identical — unverified.]</strong></p>
+
+<h2 id="nvme">Phase 4 — NVMe fault isolation and hardware fix</h2>
+<p>With the backup verified complete and the external drive disconnected, I tried to wipe the internal 512 GB NVMe for a clean install. <code>attributes disk</code> reported Current Read-only State: No, and I dismounted the active OS/recovery volumes (<code>remove all dismount</code>). <code>clean</code> still returned <strong>Access is denied</strong>, and on reboot the disk reverted to its previous state — every write was lost. That behavior is consistent with a controller-level write-lock. <strong>[Confidence: Medium</strong> — based on the drive's behavior through <code>diskpart</code>, not on SMART/health data, which I could not read off the failing controller.]</p>
+<p>I then disassembled the GS65 chassis, disconnected the battery and ribbon assemblies, removed the failed M.2 SSD, installed a 1 TB M.2 2280 NVMe, and renewed the CPU/GPU thermal paste while the board was out.</p>
+
+<h2 id="hardening">Phase 5 — Clean OS and host hardening</h2>
+<p>I enforced every control below <em>before</em> reconnecting the backup drive, so recovered data never touched an unhardened system.</p>
+<ul>
+<li><strong>Telemetry and cloud decoupling:</strong> disabled advertising ID, optional diagnostic telemetry, activity history, cloud search indexing, and lock-screen/Start suggestions; removed OneDrive; disabled Fast Startup so session and key material isn't persisted in <code>hiberfil.sys</code>.</li>
+<li><strong>Pre-boot full-disk encryption:</strong> VeraCrypt system encryption (AES / SHA-512, hardware-accelerated via AES-NI) with a strong pre-boot passphrase and a rescue disk kept on external media; confirmed 100% encryption before writing any recovered data.</li>
+<li><strong>Encrypted DNS and network posture:</strong> set the network profile to Public (blocking SMB sharing and LAN discovery) and enforced system-wide DNS-over-HTTPS via Quad9, verified against Quad9's check page.</li>
+<li><strong>Segmented browsers:</strong> Brave for signed-in work (hardened shields, V8 JIT disabled, WebRTC non-proxied UDP disabled, Quad9 DoH); LibreWolf for research (strict anti-fingerprinting, uBlock Origin, HTTPS-only, Multi-Account Containers); Tor Browser for unattributed clearnet lookups only — no logins, downloads, or <code>.onion</code> access from this workstation.</li>
+<li><strong>Host vs. lab separation:</strong> a dedicated, isolated directory for forensic artifacts and VM disks, kept off the host's normal profile, with a strict rule against running untrusted binaries on the host — anything to be detonated runs only inside an isolated VM.</li>
+</ul>
+
+<h2 id="lessons">What I'd do differently</h2>
+<ul>
+<li><strong>Back up before any repair.</strong> I ran <code>bootrec</code> before finishing the backup. On a readable but non-booting drive the correct order is copy first, repair second — a repair that writes to disk can make a marginal drive worse.</li>
+<li><strong>Use the right UEFI repair.</strong> <code>bootrec /fixmbr</code> and <code>/fixboot</code> target legacy MBR; on UEFI/GPT the repair is <code>bcdboot C:\Windows /s &lt;EFI&gt;: /f UEFI</code>.</li>
+<li><strong>Hash before and after.</strong> Without pre/post hashes I can say the copy finished, not that it's identical; a <code>Get-FileHash</code> manifest on both sides would make the integrity claim real.</li>
+<li><strong>Capture drive health earlier.</strong> The write-lock diagnosis is Medium confidence for lack of SMART data; reading the failed drive in a USB M.2 enclosure (CrystalDiskInfo / smartctl) could raise it to High.</li>
+</ul>
+
+<h2 id="skills">Skills demonstrated</h2>
+<p>Data recovery from a non-booting system, WinPE/WinRE triage, UEFI/GPT and NVMe diagnostics, <code>diskpart</code> and <code>robocopy</code>; laptop teardown, M.2 NVMe replacement, thermal service; VeraCrypt pre-boot full-disk encryption, DNS-over-HTTPS (Quad9), browser attack-surface reduction, and host/VM isolation.</p>
+
+<p class="note">Claude (Anthropic) helped me draft and de-inflate this write-up. The work, the commands, the analysis, and the findings are mine.</p>
+</article>
+</main>
+<footer><div class="wrap"><a class="back" href="../">← Back to Field Notes</a></div></footer>
+</body>
+</html>
