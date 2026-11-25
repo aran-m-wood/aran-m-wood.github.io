@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSINT Write-up: Tracing the Colonial Pipeline Ransom to the FBI Seizure · Field Notes</title>
+<meta name="description" content="A six-hop Bitcoin trace following the 2021 Colonial Pipeline / DarkSide ransom from the payment address to the FBI seizure, reproduced in a free block explorer with every address checksum-validated and every hop logged.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSINT Write-up: Tracing the Colonial Pipeline Ransom to the FBI Seizure">
+<meta property="og:description" content="A six-hop Bitcoin trace following the 2021 Colonial Pipeline / DarkSide ransom from the payment address to the FBI seizure, reproduced in a free block explorer with every address checksum-validated.">
+<meta property="og:url" content="https://aran-m-wood.github.io/colonial-trace/">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://aran-m-wood.github.io/colonial-trace/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --canvas: #1E222A; --canvas-raised: #242934; --ink: #FFFFFF; --ink-soft: #B9C0CC; --ink-faint: #7E8796;
+  --amber: #C68A4C; --amber-bright: #DDA266; --hunter: #2E4436; --rule: #343A47;
+  --body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink-soft); font-family: var(--body);
+  font-size: 1.0625rem; line-height: 1.75; font-weight: 400; }
+a { color: var(--amber-bright); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-left, 0px)); }
+header.nav { border-bottom: 1px solid var(--rule); }
+header.nav .wrap { display: flex; justify-content: space-between; align-items: center; padding-block: 14px; }
+.back { color: var(--ink); text-decoration: none; font-weight: 500; font-size: 0.9rem; }
+.coord { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-faint); text-transform: uppercase; }
+article { padding-block: 56px 72px; }
+h1 { color: var(--ink); font-size: clamp(1.75rem, 4.6vw, 2.5rem); line-height: 1.15; font-weight: 600;
+  letter-spacing: -0.015em; margin: 12px 0 14px; text-wrap: balance; }
+h2 { color: var(--ink); font-size: 1.3rem; font-weight: 600; margin: 2.4em 0 0.6em; scroll-margin-top: 16px; }
+p { margin: 0 0 1.05em; }
+strong { color: var(--ink); font-weight: 600; }
+ol, ul { margin: 0 0 1.2em; padding-left: 1.4em; }
+li { margin-bottom: 0.7em; padding-left: 0.2em; }
+li::marker { color: var(--amber); }
+.byline { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.04em; color: var(--ink-faint); margin-bottom: 22px; }
+.hop { font-family: var(--mono); font-size: 0.82rem; color: var(--amber-bright); }
+.tl { color: var(--ink); font-weight: 600; }
+.sources { font-size: 0.92rem; }
+.note { margin-top: 2.2em; padding-top: 1em; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--ink-faint); }
+footer { border-top: 1px solid var(--rule); padding-block: 22px 40px; }
+@media print { body { background: #fff; color: #111; } h1, h2, strong, .tl { color: #000; } a { color: #8a5a2b; }
+  header.nav, footer { display: none; } }
+</style>
+</head>
+<body>
+<header class="nav"><div class="wrap"><a class="back" href="../">← Field Notes</a><span class="coord">Grid B2-04 · OSINT</span></div></header>
+<main class="wrap">
+<article>
+<span class="coord">Case study · OSINT · Blockchain tracing</span>
+<h1>Following the Colonial Pipeline Ransom On-Chain, from Payment to FBI Seizure</h1>
+<p class="byline">Nov 25, 2026 | Aaron M. Wood</p>
+
+<h2 id="the-idea">The idea</h2>
+<p>The Colonial Pipeline seizure is one of the most public blockchain-tracing cases on record. In June 2021 the U.S. Department of Justice announced it had clawed back 63.7 BTC of the DarkSide ransom. Because the outcome is documented, it is an ideal case to <strong>reproduce</strong>: I can check my own work against a known answer. My goal was to start at the ransom payment and follow the money, hop by hop, entirely in a free block explorer, to the exact address the FBI seized from &mdash; proving each link, validating every address, and matching the result to the public record. The point is not a new discovery; it is a repeatable, defensible method for walking a payment across the chain and documenting it the way an investigator would need to.</p>
+
+<h2 id="background">Background</h2>
+<p>On May 7, 2021, the DarkSide ransomware group compromised Colonial Pipeline and forced the shutdown of a major U.S. fuel pipeline. Colonial paid a ransom of roughly 75 BTC (about $4.4M at the time) on May 8, 2021. On June 7, 2021, the DOJ announced it had seized <strong>63.7 BTC</strong> (about $2.3M) &mdash; the majority of the ransom &mdash; from a wallet for which the FBI held the private key, under a warrant signed by a U.S. Magistrate Judge in the Northern District of California.</p>
+<p>DarkSide ran an <strong>affiliate model</strong>: the affiliate who carries out the intrusion and the core developers who supply the malware split the proceeds, roughly 85/15. That split is visible on the blockchain, and seeing it is part of what makes this trace instructive.</p>
+
+<h2 id="method">Method</h2>
+<p>I used <a href="https://mempool.space">mempool.space</a>, a free block explorer, for the trace, and ISACA's public deconstruction of the case (<a href="https://www.isaca.org/resources/news-and-trends/isaca-now-blog/2021/did-the-fbi-hack-bitcoin-deconstructing-the-colonial-pipeline-ransom">Did the FBI Hack Bitcoin?</a>) as an independent reference to confirm I was on the right path. I applied the same discipline as my earlier sanctions trace:</p>
+<ul>
+<li><strong>Follow the payment, not the change.</strong> At each hop I followed the output that carried the money forward, not the small change output that returns to the sender.</li>
+<li><strong>Prove the linkage.</strong> The output address I followed had to reappear as an <em>input</em> of the next transaction. That unbroken address-to-address chain is what makes the trace defensible rather than a guess.</li>
+<li><strong>Match the amount hop to hop,</strong> to satoshi precision, so a wrong branch shows up as a mismatched figure.</li>
+<li><strong>Validate every address.</strong> I wrote a small offline validator (Base58Check for legacy and P2SH addresses, bech32 for segwit) and ran all seven addresses through it. A single wrong character almost always fails the checksum, so it catches the kind of transcription error a truncated screenshot can hide.</li>
+</ul>
+<p>Every hop is recorded in a tracker row &mdash; address, amount, date, transaction ID, confidence, and a note. Nothing in this write-up isn't backed by a row. Confidence is labelled the same way throughout: a hop is <strong>High</strong> when the payment output and the address linkage are unambiguous, and <strong>Medium</strong> when a named alternative could change it.</p>
+
+<h2 id="the-trace">The trace</h2>
+<p>Six hops carry the money from the ransom payment to the FBI's address. All figures are read directly off-chain and confirmed on mempool.space.</p>
+<ol>
+<li><span class="hop">Hop 0 &middot; the ransom.</span> <span class="tl">May 8, 2021.</span> About 75 BTC reached the DarkSide ransom address <strong>15JFh88&hellip;</strong> as one output of a Coinbase batch payment (tx <a href="https://mempool.space/tx/6a798026d44af27dbacd28ea21462808df8deca51794cec80c1b59e07ef924a2">6a798026</a>). This is the start of the trace.</li>
+<li><span class="hop">Hop 1.</span> 15JFh88&hellip; spent the funds onward to <strong>1DToN8Q&hellip;</strong> (75.00034246 BTC, tx <a href="https://mempool.space/tx/915fb4f0a030937f2c1d2210996e8eb32b5a41b331965c7ec78961923775bd62">915fb4f0</a>). High.</li>
+<li><span class="hop">Hop 2.</span> On to <strong>bc1q7eqww&hellip;</strong> (74.99998307 BTC, tx <a href="https://mempool.space/tx/fc78327d4e46dac01dc313067b1ac7f274cdb3a07ea9f28f6f71473145f1b264">fc78327d</a>). The money is still intact here &mdash; only a miner fee has come off. High.</li>
+<li><span class="hop">Hop 3 &middot; the split.</span> The funds divide (tx <a href="https://mempool.space/tx/0677781a5079eae8e5cbd5e6d9dcc5c02da45351a3638b85c88e5e3ecdc105a7">0677781a</a>): <strong>63.74998561 BTC</strong> to bc1qxu83&hellip; (the affiliate's ~85%) and <strong>11.24962019 BTC</strong> to bc1qu57&hellip; (the developers' ~15%). I followed the affiliate's share. High.</li>
+<li><span class="hop">Hop 4.</span> <span class="tl">May 9, 2021.</span> bc1qxu83&hellip; paid <strong>63.70000000 BTC</strong> to <strong>3EYkx&hellip;</strong> (tx <a href="https://mempool.space/tx/9436dbf0435b15378f309c35754a110db880fa9bb66a062160a25533bb4a212a">9436dbf0</a>), returning a small change output to itself. A dead-round 63.7 is itself a mild tell &mdash; a deliberate payout, not a fee-adjusted remainder. High.</li>
+<li><span class="hop">Hop 5 &middot; consolidation.</span> <span class="tl">May 27, 2021.</span> 3EYkx&hellip; fed a consolidation transaction (tx <a href="https://mempool.space/tx/daf38c7b38eb0a587cf843f47000d5c294affb4f56017370ad48c5147f5e69d9">daf38c7b</a>, input #13) that pooled many addresses into the <strong>Subject Address bc1qq2euq8&hellip;</strong>, which then held 69.60422177 BTC. Note the total: it mixes the 63.7 affiliate BTC with roughly 5.9 BTC from elsewhere, so not all of this wallet is Colonial money. High for the linkage; the mixing is exactly why the seized figure in the next hop is 63.7, not 69.6.</li>
+<li><span class="hop">Hop 6 &middot; the seizure.</span> <span class="tl">June 7, 2021.</span> Transaction <a href="https://mempool.space/tx/943f2d576ed8d9f388ba75eb82fe35cce29479b84121827ac368a5a94f44cf7a">943f2d</a> moved <strong>63.69996546 BTC</strong> out of the Subject Address to an FBI-controlled address, <strong>bc1qpx7&hellip;</strong> &mdash; the 63.7 BTC the DOJ announced it had seized that day. High, confirmed against the DOJ release.</li>
+</ol>
+
+<h2 id="what-it-shows">What the trace shows</h2>
+<p>End to end, the chain is unbroken: at every hop the output I followed reappears as the input of the next transaction, each confirmed on mempool.space. Three things stand out. The <strong>affiliate model is visible</strong> &mdash; the 85/15 split at hop 3 is DarkSide dividing its take in the open. The <strong>round 63.7</strong> reads as a deliberate payout. And the seizure took the <strong>affiliate's 63.7, not the full 69.6</strong> in the consolidation wallet, which lines up with the DOJ seizing funds "traceable to" Colonial specifically rather than everything in the wallet. All seven addresses passed checksum validation.</p>
+
+<h2 id="open-question">The open question the chain can't answer</h2>
+<p>The blockchain shows the 63.7 BTC moving from the affiliate's wallet into an FBI-controlled address. What it does <strong>not</strong> show is how the FBI obtained the key needed to sign that transaction. The DOJ stated the FBI "has the private key" to the address; it did not say how it got it. That is the question ISACA's piece examines, and the useful takeaway is what the answer is <em>not</em>: it was not a break of Bitcoin's cryptography. A block explorer can document the movement of funds; it cannot prove how a key was acquired. That boundary &mdash; between what the chain proves and what it doesn't &mdash; is the part worth carrying into any real investigation. [Open]</p>
+
+<h2 id="limits">Limits</h2>
+<p>This is a solved, publicly documented case; the value here is a reproduced, defensible method, not a new finding. ISACA traced the path backward and did not state every hop's amount, so I verified each hop forward on mempool and logged the figures myself. The entity labels (DarkSide ransom address, Subject Address, FBI-controlled address) come from the DOJ record and the ISACA analysis, not from independent attribution. The 69.6 BTC consolidation mixes non-Colonial funds, so only the 63.7 is cleanly "the ransom." And checksum validation proves each address is well-formed, not that it is the specific output of its transaction &mdash; that linkage is what the hop-to-hop address match on mempool establishes.</p>
+
+<h2 id="sources">Sources</h2>
+<ul class="sources">
+<li><a href="https://www.justice.gov/archives/opa/pr/department-justice-seizes-23-million-cryptocurrency-paid-ransomware-extortionists-darkside">U.S. Department of Justice: Department of Justice Seizes $2.3 Million in Cryptocurrency Paid to the Ransomware Extortionists Darkside</a> (Jun 7, 2021)</li>
+<li><a href="https://www.isaca.org/resources/news-and-trends/isaca-now-blog/2021/did-the-fbi-hack-bitcoin-deconstructing-the-colonial-pipeline-ransom">ISACA Now Blog: Did the FBI Hack Bitcoin? Deconstructing the Colonial Pipeline Ransom</a></li>
+<li>Hop transactions on <a href="https://mempool.space">mempool.space</a>: <a href="https://mempool.space/tx/6a798026d44af27dbacd28ea21462808df8deca51794cec80c1b59e07ef924a2">hop 0</a>, <a href="https://mempool.space/tx/915fb4f0a030937f2c1d2210996e8eb32b5a41b331965c7ec78961923775bd62">hop 1</a>, <a href="https://mempool.space/tx/fc78327d4e46dac01dc313067b1ac7f274cdb3a07ea9f28f6f71473145f1b264">hop 2</a>, <a href="https://mempool.space/tx/0677781a5079eae8e5cbd5e6d9dcc5c02da45351a3638b85c88e5e3ecdc105a7">hop 3</a>, <a href="https://mempool.space/tx/9436dbf0435b15378f309c35754a110db880fa9bb66a062160a25533bb4a212a">hop 4</a>, <a href="https://mempool.space/tx/daf38c7b38eb0a587cf843f47000d5c294affb4f56017370ad48c5147f5e69d9">hop 5</a>, <a href="https://mempool.space/tx/943f2d576ed8d9f388ba75eb82fe35cce29479b84121827ac368a5a94f44cf7a">hop 6 (seizure)</a></li>
+</ul>
+
+<p class="note">Claude (Anthropic) helped me draft this write-up and keep it on scope. The final edit, content, analysis, and findings are mine.</p>
+</article>
+</main>
+<footer><div class="wrap"><a class="back" href="../">← Back to Field Notes</a></div></footer>
+</body>
+</html>
