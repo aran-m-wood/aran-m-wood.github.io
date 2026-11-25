@@ -289,6 +289,10 @@ const CASES = [
     summary: "Recovered 166.75 GB (28,758 files) from a non-booting Windows 11 laptop with Windows PE, isolated a write-locked 512 GB NVMe SSD, replaced it through a full chassis teardown, and rebuilt a hardened workstation (VeraCrypt pre-boot FDE, Quad9 DoH, segmented browsers) before restoring data.",
     question: "Can the data be recovered from a non-booting laptop, and is the drive failing or just the boot chain?", method: "Windows PE, diskpart and robocopy, NVMe write-lock isolation, hardware teardown, hardened rebuild", tags: ["DFIR", "Data recovery", "Hardening"],
     link: "data-recovery/", template: false },
+  { cat: "osint", grid: "B2-04", title: "Tracing the Colonial Pipeline ransom on-chain to the FBI seizure",
+    summary: "A six-hop Bitcoin trace following the 2021 Colonial Pipeline / DarkSide ransom from the payment address to the FBI's 63.7 BTC seizure, reproduced in a free block explorer. Every hop's output address is confirmed as the next hop's input, every amount matched to satoshi, and all seven addresses checksum-validated offline.",
+    question: "Can the Colonial Pipeline ransom be traced from payment to the FBI seizure address, hop by hop, in a free explorer?", method: "mempool.space, follow-the-payment tracing, offline Base58Check and bech32 address validation, DOJ and ISACA as references", tags: ["OSINT", "Blockchain tracing", "Bitcoin", "Ransomware"],
+    link: "colonial-trace/", template: false },
   
   
   
